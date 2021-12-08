@@ -24,17 +24,15 @@ If you previously built HSE without the `-Dycsb=true` option,
 run the following commands in the `hse` repo directory.
 
 ```shell
-poetry shell
 meson setup <builddir> --reconfigure -Dycsb=true
 meson compile -C <builddir>
 meson install -C <builddir>
-exit
 ```
 
 In the above, `<builddir>` is the build directory you specified when
 previously compiling HSE, which is commonly named `build`.
 The default install directory is `/opt/hse`, which you can override
-with the `--destdir` option to `meson install`.
+by configuring the build with either `-Dprefix=$prefix` or `--prefix=$prefix`.
 
 
 ## Installing YCSB Dependencies
