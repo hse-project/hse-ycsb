@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 
+<!--
 SPDX-License-Identifier: Apache-2.0
 
-Copyright (C) 2015-2020 Micron Technology, Inc.
+Copyright (C) 2015-2022 Micron Technology, Inc.
 
 This code is derived from the ycsb project.
 -->
@@ -148,7 +148,7 @@ This code is derived from the ycsb project.
     <tablestore.version>4.8.0</tablestore.version>
     <voltdb.version>9.1.1</voltdb.version>
 
-    <hse.version>0.0</hse.version>
+    <hse.version>2.2.0</hse.version>
   </properties>
 
   <modules>

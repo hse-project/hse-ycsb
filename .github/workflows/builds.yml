@@ -1,0 +1,76 @@
+name: Builds
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/**"
+      - "!.github/workflows/builds.yaml"
+      - .gitignore
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths-ignore:
+      - "**.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/**"
+      - "!.github/workflows/builds.yaml"
+      - .gitignore
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Initialize
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential ninja-build pkg-config \
+            libbsd-dev libmicrohttpd-dev liburcu-dev libyaml-dev \
+            libcurl4-openssl-dev python3-setuptools libmongoc-dev \
+            libbson-dev libssl-dev libsasl2-dev openjdk-8-jdk maven
+          sudo python3 -m pip install meson
+
+      - name: Checkout hse-java
+        uses: actions/checkout@v2
+        with:
+          repository: hse-project/hse-java
+          path: hse-java
+
+      - name: Checkout hse
+        uses: actions/checkout@v2
+        with:
+          repository: hse-project/hse
+          path: hse-java/subprojects/hse
+
+      - name: Setup hse-java
+        run: |
+          cd hse-java
+          meson build --buildtype=release --prefix=/usr
+
+      - name: Build hse-java
+        run: |
+          cd hse-java
+          ninja -C build
+
+      - name: Install hse-java
+        run: |
+          cd hse-java
+          sudo meson install -C build
+          ninja -C build deploy
+
+      - name: Checkout YCSB
+        uses: actions/checkout@v2
+        with:
+          path: hse-ycsb
+
+      - name: Build YCSB
+        run: |
+          cd hse-ycsb
+          mvn -pl hse -am clean package
+
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: hse-ycsb
+          path: hse/builddir/meson-logs/

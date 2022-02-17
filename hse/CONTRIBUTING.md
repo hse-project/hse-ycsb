@@ -9,7 +9,6 @@ in the [`CONTRIBUTING.md`](https://github.com/hse-project/hse/blob/master/CONTRI
 file in the `hse` repo.  It contains important information on contributing
 to any repo in the HSE project.
 
-
 ## Information on Contributing to this Repo
 
 Please limit your changes to files in the `hse-ycsb/hse` directory.
