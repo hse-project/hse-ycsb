@@ -55,6 +55,7 @@ public class HseClient extends DB {
 
   /** YCSB keys are of the form userXXXXXXXXXXX... */
   private static final String YCSB_PREFIX = "user";
+  private static final int YCSB_PREFIX_LENGTH = YCSB_PREFIX.length();
   /** 7 allows us to roughly break up the keyspace into 1000 groups. */
   private static final int PREFIX_LEN = 7;
   private static int valueBufSize;
@@ -62,9 +63,6 @@ public class HseClient extends DB {
   private static Kvs kvs;
   private static Path kvdbHome;
   private static String kvsName;
-
-  // Re-use the same buffer for all GET requests
-  private ByteBuffer getBuffer;
 
   // Re-use the same buffer for all keys
   private ByteBuffer keyBuffer;
@@ -105,22 +103,22 @@ public class HseClient extends DB {
 
     assert prefix.contains(YCSB_PREFIX);
 
-    final int ycsbPrefixLength = YCSB_PREFIX.length();
     final int prefixLength = prefix.length();
 
     /* The following could be removed if given a prefix like "user123",
      * we could add 1 to be "user124".
      */
-    long nextPrefix = 0;
+    Long nextPrefix = new Long(0);
     try {
-      nextPrefix = Long.parseLong(prefix.substring(ycsbPrefixLength, prefixLength));
+      nextPrefix = Long.parseLong(prefix.substring(YCSB_PREFIX_LENGTH, prefixLength));
       ++nextPrefix;
     } catch (final NumberFormatException e) {
+      LOGGER.error("Prefix '" + prefix + "' contains non-numeric characters");
       throw new RuntimeException(e);
     }
 
     // If there are no more prefixes left
-    if (nextPrefix > Math.pow(10, prefixLength - ycsbPrefixLength) - 1) {
+    if (nextPrefix > Math.pow(10, prefixLength - YCSB_PREFIX_LENGTH) - 1) {
       return null;
     }
 
@@ -279,7 +277,6 @@ public class HseClient extends DB {
       }
     }
 
-    getBuffer = ByteBuffer.allocateDirect(valueBufSize);
     keyBuffer = ByteBuffer.allocateDirect(Limits.KVS_KEY_LEN_MAX);
     valueBuffer = ByteBuffer.allocateDirect(valueBufSize);
   }
@@ -330,13 +327,12 @@ public class HseClient extends DB {
   @Override
   public Status read(final String table, final String key, Set<String> fields, Map<String, ByteIterator> result) {
     try {
-      final Optional<Integer> valueLen = kvs.get(key, getBuffer);
+      final Optional<Integer> valueLen = kvs.get(key, valueBuffer);
       assert valueLen.isPresent();
 
-      deserializeValues(getBuffer, fields, result);
+      deserializeValues(valueBuffer, fields, result);
 
-      // Put the buffer back to position 0
-      getBuffer.rewind();
+      valueBuffer.clear();
 
       return Status.OK;
     } catch (final HseException e) {
@@ -359,7 +355,7 @@ public class HseClient extends DB {
     }
 
     try {
-      Optional<Integer> foundLen = cursor.seek(startkey, keyBuffer);
+      Optional<Integer> foundLen = cursor.seek(startkey, (byte[]) null);
       if (!foundLen.isPresent() || foundLen.get() == 0) {
         LOGGER.error("Scan failed for startkey=" + startkey);
         return Status.ERROR;
@@ -377,8 +373,8 @@ public class HseClient extends DB {
             final HashMap<String, ByteIterator> map = new HashMap<>();
             deserializeValues(valueBuffer, fields, map);
 
-            // Put the buffer back to position 0
-            valueBuffer.rewind();
+            keyBuffer.clear();
+            valueBuffer.clear();
 
             result.add(map);
           }
@@ -408,7 +404,7 @@ public class HseClient extends DB {
           cursor = kvs.cursor(prefix);
 
           if (tmpPrefix != null) {
-            foundLen = cursor.seek(tmpPrefix, keyBuffer);
+            foundLen = cursor.seek(tmpPrefix, (byte[]) null);
             if (!foundLen.isPresent() || foundLen.get() == 0) {
               // Do nothing...
               break;
