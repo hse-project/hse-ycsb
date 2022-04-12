@@ -32,13 +32,13 @@ jobs:
           sudo python3 -m pip install meson
 
       - name: Checkout hse-java
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hse-project/hse-java
           path: hse-java
 
       - name: Checkout hse
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hse-project/hse
           path: hse-java/subprojects/hse
@@ -60,7 +60,7 @@ jobs:
           ninja -C build deploy
 
       - name: Checkout YCSB
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: hse-ycsb
 
