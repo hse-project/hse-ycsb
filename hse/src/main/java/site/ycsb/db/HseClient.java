@@ -224,7 +224,7 @@ public class HseClient extends DB {
             CoreWorkload.SCAN_PROPORTION_PROPERTY_DEFAULT));
         if (scanProportion > 0) {
           // Parameters for workloads with scans, like workload E.
-          kvdbRParams.add("csched_vb_scatter_pct=1");
+          kvdbRParams.add("csched_max_vgroups=1");
           kvsRParams.add("cn_cursor_vra=0");
         }
 
