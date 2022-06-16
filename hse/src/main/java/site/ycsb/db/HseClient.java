@@ -53,11 +53,6 @@ public class HseClient extends DB {
   private static final Logger LOGGER = LoggerFactory.getLogger(HseClient.class);
   private static final AtomicInteger REFERENCES = new AtomicInteger(0);
 
-  /** YCSB keys are of the form userXXXXXXXXXXX... */
-  private static final String YCSB_PREFIX = "user";
-  private static final int YCSB_PREFIX_LENGTH = YCSB_PREFIX.length();
-  /** 7 allows us to roughly break up the keyspace into 1000 groups. */
-  private static final int PREFIX_LEN = 7;
   private static int valueBufSize;
   private static Kvdb kvdb;
   private static Kvs kvs;
@@ -94,43 +89,6 @@ public class HseClient extends DB {
     }
 
     return result;
-  }
-
-  private static String getNextPrefix(final String prefix) {
-    if (prefix == null) {
-      return null;
-    }
-
-    assert prefix.contains(YCSB_PREFIX);
-
-    final int prefixLength = prefix.length();
-
-    /* The following could be removed if given a prefix like "user123",
-     * we could add 1 to be "user124".
-     */
-    Long nextPrefix = new Long(0);
-    try {
-      nextPrefix = Long.parseLong(prefix.substring(YCSB_PREFIX_LENGTH, prefixLength));
-      ++nextPrefix;
-    } catch (final NumberFormatException e) {
-      LOGGER.error("Prefix '" + prefix + "' contains non-numeric characters");
-      throw new RuntimeException(e);
-    }
-
-    // If there are no more prefixes left
-    if (nextPrefix > Math.pow(10, prefixLength - YCSB_PREFIX_LENGTH) - 1) {
-      return null;
-    }
-
-    return YCSB_PREFIX + Long.toString(nextPrefix);
-  }
-
-  private static String getPrefix(final String key) {
-    if (key == null || key.length() <= PREFIX_LEN) {
-      return null;
-    }
-
-    return key.substring(0, PREFIX_LEN);
   }
 
   /**
@@ -249,7 +207,6 @@ public class HseClient extends DB {
 
         // Create KVS unless it has already been created.
         try {
-          kvsCParams.add(String.format("prefix.length=%d", PREFIX_LEN));
           kvdb.kvsCreate(kvsName, kvsCParams.stream().toArray(String[]::new));
           kvs = kvdb.kvsOpen(kvsName, kvsRParams.stream().toArray(String[]::new));
         } catch (final HseException e) {
@@ -288,13 +245,13 @@ public class HseClient extends DB {
         try {
           kvs.close();
         } catch (final HseException e) {
-          LOGGER.error(e.toString());
+          LOGGER.error(e.getMessage(), e);
         }
 
         try {
           kvdb.close();
         } catch (final HseException e) {
-          LOGGER.error(e.toString());
+          LOGGER.error(e.getMessage(), e);
         }
 
         Hse.fini();
@@ -308,7 +265,7 @@ public class HseClient extends DB {
       kvs.delete(key);
       return Status.OK;
     } catch (final HseException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       return Status.ERROR;
     }
   }
@@ -319,7 +276,7 @@ public class HseClient extends DB {
       kvs.put(key, serializeValues(values));
       return Status.OK;
     } catch (final IOException | HseException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       return Status.ERROR;
     }
   }
@@ -336,7 +293,7 @@ public class HseClient extends DB {
 
       return Status.OK;
     } catch (final HseException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       return Status.ERROR;
     }
   }
@@ -344,18 +301,8 @@ public class HseClient extends DB {
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
-    String prefix = getPrefix(startkey);
-
-    KvsCursor cursor;
-    try {
-      cursor = kvs.cursor(prefix);
-    } catch (final HseException e) {
-      e.printStackTrace();
-      return Status.ERROR;
-    }
-
-    try {
-      Optional<Integer> foundLen = cursor.seek(startkey, (byte[]) null);
+    try (final KvsCursor cursor = kvs.cursor()) {
+      final Optional<Integer> foundLen = cursor.seek(startkey, (byte[]) null);
       if (!foundLen.isPresent() || foundLen.get() == 0) {
         LOGGER.error("Scan failed for startkey=" + startkey);
         return Status.ERROR;
@@ -363,64 +310,22 @@ public class HseClient extends DB {
 
       result.ensureCapacity(recordcount);
 
-      int i = 0;
-      int tries = 3;
-      while (true) {
-        try {
-          for (; i < recordcount; i++) {
-            cursor.read(keyBuffer, valueBuffer);
+      for (int i = 0; i < recordcount; i++) {
+        cursor.read(keyBuffer, valueBuffer);
 
-            final HashMap<String, ByteIterator> map = new HashMap<>();
-            deserializeValues(valueBuffer, fields, map);
+        final HashMap<String, ByteIterator> map = new HashMap<>();
+        deserializeValues(valueBuffer, fields, map);
 
-            keyBuffer.clear();
-            valueBuffer.clear();
+        keyBuffer.clear();
+        valueBuffer.clear();
 
-            result.add(map);
-          }
-
-          break;
-        } catch (final EOFException e) {
-          prefix = getNextPrefix(prefix);
-          // Do nothing if this is a non-prefixed cursor or is the last prefix.
-          if (prefix == null) {
-            break;
-          }
-
-          /* This loop handles the case where we are at the end of a prefix and
-           * haven't scanned 'recordcount' records yet. The getNextPrefix()
-           * returns the next prefix in lexicographic order. If there are 3
-           * successive empty prefixes, we fallback to a non-prefixed cursor
-           * to avoid getting stuck in searching through a large sequence of
-           * empty prefixes.
-           */
-          String tmpPrefix = null;
-          if (tries-- == 0) {
-            tmpPrefix = prefix;
-            prefix = null;
-          }
-
-          cursor.close();
-          cursor = kvs.cursor(prefix);
-
-          if (tmpPrefix != null) {
-            foundLen = cursor.seek(tmpPrefix, (byte[]) null);
-            if (!foundLen.isPresent() || foundLen.get() == 0) {
-              // Do nothing...
-              break;
-            }
-          }
-        }
+        result.add(map);
       }
     } catch (final HseException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       return Status.ERROR;
-    } finally {
-      try {
-        cursor.close();
-      } catch (final HseException e) {
-        e.printStackTrace();
-      }
+    } catch (final EOFException e) {
+      return Status.OK;
     }
 
     return Status.OK;
@@ -432,7 +337,7 @@ public class HseClient extends DB {
       kvs.put(key, serializeValues(values));
       return Status.OK;
     } catch (final IOException | HseException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       return Status.ERROR;
     }
   }
