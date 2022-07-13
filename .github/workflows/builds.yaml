@@ -7,6 +7,7 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/workflows/**"
       - "!.github/workflows/builds.yaml"
+      - .github/dependabot.yaml
       - .gitignore
   pull_request:
     types: [opened, synchronize, reopened, edited]
@@ -15,11 +16,12 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/workflows/**"
       - "!.github/workflows/builds.yaml"
+      - .github/dependabot.yaml
       - .gitignore
 
 jobs:
   ubuntu:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Initialize
@@ -31,17 +33,33 @@ jobs:
             libbson-dev libssl-dev libsasl2-dev openjdk-8-jdk maven
           sudo python3 -m pip install meson
 
+      - name: Determine branches
+        id: determine-branches
+        run: |
+          for p in hse hse-java; do
+            [ "$GITHUB_EVENT_NAME" = "pull_request" ] && git ls-remote \
+              --exit-code --heads "https://github.com/hse-project/$p.git" \
+              "$GITHUB_HEAD_REF" > /dev/null
+            if [ $? -eq 0 ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=$p::$GITHUB_HEAD_REF"
+            else
+              echo "::set-output name=$p::master"
+            fi
+          done
+
       - name: Checkout hse-java
         uses: actions/checkout@v3
         with:
           repository: hse-project/hse-java
           path: hse-java
+          ref: ${{ steps.determine-branches.outputs.hse-java }}
 
-      - name: Checkout hse
+      - name: Checkout HSE
         uses: actions/checkout@v3
         with:
           repository: hse-project/hse
           path: hse-java/subprojects/hse
+          ref: ${{ steps.determine-branches.outputs.hse }}
 
       - name: Setup hse-java
         run: |
