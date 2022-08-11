@@ -1,0 +1,28 @@
+name: Builds
+
+on:
+  push:
+    paths-ignore:
+      - "**.java"
+      - "**/pom.xml"
+      - .github/workflows/builds.yaml
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths-ignore:
+      - "**.java"
+      - "**/pom.xml"
+      - .github/workflows/builds.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-ignore-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: |
+          echo "Skipping ${{ github.workflow }}/${{ github.job }}"

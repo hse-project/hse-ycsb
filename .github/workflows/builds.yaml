@@ -2,25 +2,26 @@ name: Builds
 
 on:
   push:
-    paths-ignore:
-      - "**.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/workflows/**"
-      - "!.github/workflows/builds.yaml"
-      - .github/dependabot.yaml
-      - .gitignore
+    paths:
+      - "**.java"
+      - "**/pom.xml"
+      - .github/workflows/builds.yaml
   pull_request:
     types: [opened, synchronize, reopened, edited]
-    paths-ignore:
-      - "**.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/workflows/**"
-      - "!.github/workflows/builds.yaml"
-      - .github/dependabot.yaml
-      - .gitignore
+    paths:
+      - "**.java"
+      - "**/pom.xml"
+      - .github/workflows/builds.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  packages: read
 
 jobs:
-  ubuntu:
+  build:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/hse-project/ci-images/ubuntu-22.04:master
