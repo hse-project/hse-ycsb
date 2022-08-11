@@ -21,30 +21,38 @@ on:
 
 jobs:
   ubuntu:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/hse-project/ci-images/ubuntu-22.04:master
 
     steps:
-      - name: Initialize
-        run: |
-          sudo apt-get update
-          sudo apt-get install build-essential ninja-build pkg-config \
-            libbsd-dev libmicrohttpd-dev liburcu-dev libyaml-dev \
-            libcurl4-openssl-dev python3-setuptools libmongoc-dev \
-            libbson-dev libssl-dev libsasl2-dev openjdk-8-jdk maven
-          sudo python3 -m pip install meson
-
       - name: Determine branches
         id: determine-branches
+        shell: sh +e {0}
         run: |
           for p in hse hse-java; do
-            [ "$GITHUB_EVENT_NAME" = "pull_request" ] && git ls-remote \
-              --exit-code --heads "https://github.com/hse-project/$p.git" \
-              "$GITHUB_HEAD_REF" > /dev/null
-            if [ $? -eq 0 ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              echo "::set-output name=$p::$GITHUB_HEAD_REF"
+            branch=master
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              git ls-remote --exit-code --heads \
+                "https://github.com/hse-project/$p.git" "$GITHUB_HEAD_REF" \
+                > /dev/null
+
+              if [ $? -eq 0 ]; then
+                branch="$GITHUB_HEAD_REF"
+              fi
+            elif [ "$GITHUB_EVENT_NAME" = "release" ]; then
+              branch=$(git rev-parse --abbrev-ref HEAD)
             else
-              echo "::set-output name=$p::master"
+              git ls-remote --exit-code --heads \
+                "https://github.com/hse-project/$p.git" "$GITHUB_REF" \
+                > /dev/null
+
+              if [ $? -eq 0 ]; then
+                branch="$GITHUB_REF_NAME"
+              fi
             fi
+
+            echo "::set-output name=$p::$branch"
           done
 
       - name: Checkout hse-java
@@ -64,17 +72,17 @@ jobs:
       - name: Setup hse-java
         run: |
           cd hse-java
-          meson build --buildtype=release --prefix=/usr
+          meson builddir --buildtype=release --prefix=/usr
 
       - name: Build hse-java
         run: |
           cd hse-java
-          ninja -C build
+          ninja -C builddir
 
       - name: Install hse-java
         run: |
           cd hse-java
-          sudo meson install -C build
+          meson install -C builddir
 
       - name: Checkout YCSB
         uses: actions/checkout@v3
@@ -90,4 +98,4 @@ jobs:
         if: failure()
         with:
           name: hse-ycsb
-          path: hse/builddir/meson-logs/
+          path: hse-java/builddir/meson-logs/

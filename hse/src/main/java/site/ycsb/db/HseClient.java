@@ -177,15 +177,6 @@ public class HseClient extends DB {
         final List<String> kvsCParams = paramsToList(props.getProperty("hse.kvs.cparams"));
         final List<String> kvsRParams = paramsToList(props.getProperty("hse.kvs.rparams"));
 
-        final double scanProportion = Double.valueOf(props.getProperty(
-            CoreWorkload.SCAN_PROPORTION_PROPERTY,
-            CoreWorkload.SCAN_PROPORTION_PROPERTY_DEFAULT));
-        if (scanProportion > 0) {
-          // Parameters for workloads with scans, like workload E.
-          kvdbRParams.add("csched_max_vgroups=1");
-          kvsRParams.add("cn_cursor_vra=0");
-        }
-
         // Create KVDB unless it has already been created.
         try {
           Kvdb.create(kvdbHome, kvdbCParams.stream().toArray(String[]::new));
