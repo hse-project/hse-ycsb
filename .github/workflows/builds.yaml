@@ -73,7 +73,7 @@ jobs:
       - name: Setup hse-java
         run: |
           cd hse-java
-          meson builddir --buildtype=release --prefix=/usr
+          meson setup builddir --buildtype=release --prefix=/usr
 
       - name: Build hse-java
         run: |
