@@ -53,7 +53,7 @@ jobs:
               fi
             fi
 
-            echo "::set-output name=$p::$branch"
+            echo "$p=$branch" >> "$GITHUB_OUTPUT"
           done
 
       - name: Checkout hse-java
