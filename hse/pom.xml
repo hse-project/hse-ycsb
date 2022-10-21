@@ -38,7 +38,7 @@ This code is derived from the ycsb project.
       <version>0.10.3</version>
     </dependency>
     <dependency>
-      <groupId>com.micron</groupId>
+      <groupId>com.micron.hse_project</groupId>
       <artifactId>hse</artifactId>
       <version>3.0.0</version>
     </dependency>
