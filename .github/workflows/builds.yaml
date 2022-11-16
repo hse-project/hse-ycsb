@@ -7,7 +7,7 @@ on:
       - "**/pom.xml"
       - .github/workflows/builds.yaml
   pull_request:
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened]
     paths:
       - "**.java"
       - "**/pom.xml"
@@ -69,6 +69,19 @@ jobs:
           repository: hse-project/hse
           path: hse-java/subprojects/hse
           ref: ${{ steps.determine-branches.outputs.hse }}
+
+      - name: Export Maven local repository
+        id: maven-local-repository
+        run: |
+          local_repository=$(mvn help:evaluate -Dexpression=settings.localRepository --quiet -DforceStdout)
+          echo "local-repository=$local_repository" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Maven dependencies
+        id: maven-dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.maven-local-repository.outputs.local-repository }}
+          key: maven-dependencies-${{ hashFiles('**/pom.xml') }}
 
       - name: Setup hse-java
         run: |
