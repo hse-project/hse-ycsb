@@ -38,7 +38,7 @@ This code is derived from the ycsb project.
       <version>0.10.3</version>
     </dependency>
     <dependency>
-      <groupId>io.github.hse_project</groupId>
+      <groupId>io.github.hse-project</groupId>
       <artifactId>hse</artifactId>
       <version>3.1.0</version>
     </dependency>
