@@ -25,12 +25,12 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.micron.hse_project.hse.Hse;
-import com.micron.hse_project.hse.HseException;
-import com.micron.hse_project.hse.Kvdb;
-import com.micron.hse_project.hse.Kvs;
-import com.micron.hse_project.hse.KvsCursor;
-import com.micron.hse_project.hse.Limits;
+import io.github.hse_project.hse.Hse;
+import io.github.hse_project.hse.HseException;
+import io.github.hse_project.hse.Kvdb;
+import io.github.hse_project.hse.Kvs;
+import io.github.hse_project.hse.KvsCursor;
+import io.github.hse_project.hse.Limits;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
