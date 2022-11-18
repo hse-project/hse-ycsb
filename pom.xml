@@ -138,7 +138,7 @@ This code is derived from the ycsb project.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <redis.version>2.10.2</redis.version>
     <riak.version>2.0.5</riak.version>
-    <rocksdb.version>6.22.1</rocksdb.version>
+    <rocksdb.version>7.7.3</rocksdb.version>
     <s3.version>1.10.20</s3.version>
     <solr.version>5.5.3</solr.version>
     <solr6.version>6.4.1</solr6.version>
