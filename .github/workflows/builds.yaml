@@ -57,14 +57,14 @@ jobs:
           done
 
       - name: Checkout hse-java
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hse-project/hse-java
           path: hse-java
           ref: ${{ steps.determine-branches.outputs.hse-java }}
 
       - name: Checkout HSE
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hse-project/hse
           path: hse-java/subprojects/hse
@@ -100,7 +100,7 @@ jobs:
           meson install -C builddir
 
       - name: Checkout YCSB
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: hse-ycsb
 
