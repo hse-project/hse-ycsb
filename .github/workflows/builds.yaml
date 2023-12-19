@@ -109,7 +109,7 @@ jobs:
           cd hse-ycsb
           mvn -pl hse -am clean package
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: hse-ycsb
